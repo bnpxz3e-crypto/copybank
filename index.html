@@ -24,15 +24,6 @@ body {
   max-width: 320px;
   text-align: center;
 }
-button {
-  width: 100%;
-  padding: 12px;
-  background: #06c755;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-}
 </style>
 </head>
 
@@ -40,19 +31,28 @@ button {
 <div class="card">
   <h3>ธนาคารไทยพาณิชย์</h3>
   <h2 id="acc">123-4-56789-0</h2>
-  <button onclick="copy()">📋 คัดลอกเลขบัญชี</button>
+  <p>กำลังคัดลอกเลขบัญชี…</p>
 </div>
 
 <script>
 const LIFF_ID = "2009050381-e6ocmKDn";
 
-liff.init({ liffId: LIFF_ID });
+liff.init({ liffId: LIFF_ID })
+  .then(() => {
+    autoCopy();
+  })
+  .catch(err => {
+    console.error(err);
+  });
 
-function copy() {
+function autoCopy() {
   const text = document.getElementById("acc").innerText;
+
   navigator.clipboard.writeText(text).then(() => {
-    alert("คัดลอกแล้ว");
-    liff.closeWindow();
+    // หน่วงนิดนึงให้ระบบคัดลอกเสร็จ
+    setTimeout(() => {
+      liff.closeWindow();
+    }, 300);
   });
 }
 </script>
