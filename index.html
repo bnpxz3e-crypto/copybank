@@ -1,60 +1,141 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>คัดลอกเลขบัญชี</title>
-
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
-<style>
-body {
-  font-family: Arial;
-  background: #f2f2f2;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-}
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 320px;
-  text-align: center;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>เช็คตำแหน่งเครื่อง</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111827;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .box {
+      width: 100%;
+      max-width: 700px;
+      background: #1f2937;
+      padding: 25px;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px #0008;
+    }
+    button {
+      width: 100%;
+      padding: 18px;
+      font-size: 20px;
+      border: none;
+      border-radius: 12px;
+      background: #22c55e;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover { background: #16a34a; }
+    pre {
+      margin-top: 20px;
+      background: #020617;
+      padding: 18px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+  </style>
 </head>
-
 <body>
-<div class="card">
-  <h3>ธนาคารไทยพาณิชย์</h3>
-  <h2 id="acc">123-4-56789-0</h2>
-  <p>กำลังคัดลอกเลขบัญชี…</p>
-</div>
+
+  <div class="box">
+    <button onclick="getLocationInfo()">กดเพื่อแสดงตำแหน่งเครื่องนี้</button>
+    <pre id="result">ยังไม่มีข้อมูล</pre>
+  </div>
 
 <script>
-const LIFF_ID = "2009050381-e6ocmKDn";
+async function getLocationInfo() {
+  const result = document.getElementById("result");
+  result.textContent = "กำลังขอพิกัดและดึงข้อมูล IP...";
 
-liff.init({ liffId: LIFF_ID })
-  .then(() => {
-    autoCopy();
-  })
-  .catch(err => {
-    console.error(err);
-  });
+  let gpsData = null;
 
-function autoCopy() {
-  const text = document.getElementById("acc").innerText;
+  try {
+    gpsData = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy + " เมตร",
+          altitude: pos.coords.altitude,
+          speed: pos.coords.speed,
+          heading: pos.coords.heading
+        }),
+        err => reject(err),
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
+    });
+  } catch (e) {
+    gpsData = {
+      error: "ผู้ใช้ไม่อนุญาต GPS หรือเครื่องนี้ไม่รองรับ / ต้องใช้ HTTPS"
+    };
+  }
 
-  navigator.clipboard.writeText(text).then(() => {
-    // หน่วงนิดนึงให้ระบบคัดลอกเสร็จ
-    setTimeout(() => {
-      liff.closeWindow();
-    }, 300);
-  });
+  let ipData = null;
+
+  try {
+    const res = await fetch("https://ipapi.co/json/");
+    ipData = await res.json();
+  } catch (e) {
+    ipData = { error: "ดึงข้อมูล IP ไม่สำเร็จ" };
+  }
+
+  const text = `
+====== ตำแหน่ง GPS จากเครื่อง ======
+Latitude: ${gpsData.latitude ?? "-"}
+Longitude: ${gpsData.longitude ?? "-"}
+ความแม่นยำ: ${gpsData.accuracy ?? "-"}
+Altitude: ${gpsData.altitude ?? "-"}
+Speed: ${gpsData.speed ?? "-"}
+Heading: ${gpsData.heading ?? "-"}
+Error: ${gpsData.error ?? "-"}
+
+Google Maps:
+${gpsData.latitude && gpsData.longitude ? `https://www.google.com/maps?q=${gpsData.latitude},${gpsData.longitude}` : "-"}
+
+
+====== ข้อมูลจาก IP ======
+IP: ${ipData.ip ?? "-"}
+เครือข่าย: ${ipData.network ?? "-"}
+ประเทศ: ${ipData.country_name ?? "-"}
+รหัสประเทศ: ${ipData.country ?? "-"}
+จังหวัด/Region: ${ipData.region ?? "-"}
+เมือง/อำเภอโดยประมาณ: ${ipData.city ?? "-"}
+รหัสไปรษณีย์: ${ipData.postal ?? "-"}
+Latitude จาก IP: ${ipData.latitude ?? "-"}
+Longitude จาก IP: ${ipData.longitude ?? "-"}
+Timezone: ${ipData.timezone ?? "-"}
+UTC Offset: ${ipData.utc_offset ?? "-"}
+สกุลเงิน: ${ipData.currency ?? "-"}
+ภาษา: ${ipData.languages ?? "-"}
+ASN: ${ipData.asn ?? "-"}
+ผู้ให้บริการ/องค์กร: ${ipData.org ?? "-"}
+Continent: ${ipData.continent_code ?? "-"}
+Country Calling Code: ${ipData.country_calling_code ?? "-"}
+Country Capital: ${ipData.country_capital ?? "-"}
+Country TLD: ${ipData.country_tld ?? "-"}
+
+====== Raw IP Data ทั้งหมด ======
+${JSON.stringify(ipData, null, 2)}
+`;
+
+  result.textContent = text;
 }
 </script>
+
 </body>
 </html>
